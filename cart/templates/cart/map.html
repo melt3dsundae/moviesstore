@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block content %}
+
+    <div class="row" style="display: flex; gap:20px">
+     <div id="map" class="col-md-8" style="height: 500px; flex:2"></div>
+     <div id="panel" class="col-md-4" style="flex:1; padding: 20px">
+        <h2>Click on a region marker to see trending movies</h2>
+     </div>
+</div>
+
+{{ template_data.regions|json_script:"regions" }}
+     <script>
+         var map = L.map('map').setView([33.7490, -84.3880], 13);
+         L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            maxZoom: 19,
+             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+         }).addTo(map);
+
+         var regions = JSON.parse(document.getElementById('regions').textContent);
+         for (const r of regions) {
+            L.marker([r.lat, r.lng]).addTo(map).on('click', function() {
+                var panel = document.getElementById('panel');
+                panel.innerHTML = '<h4> Trending in ' + r.region + '</h4><ol>';
+                for (const [title, count] of Object.entries(r.counts)) {
+                    panel.innerHTML += '<li>' + title + ': ' + count + ' purchased </li>';
+                }
+                panel.innerHTML += '</ol>';
+                })
+            };
+
+     </script>
+{% endblock content %}
