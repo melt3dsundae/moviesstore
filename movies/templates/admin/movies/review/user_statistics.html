@@ -1,0 +1,33 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<p>
+    <a href="{% url 'admin:movies_review_changelist' %}">
+        Back to Reviews Tab
+    </a>
+</p>
+
+<table>
+    <thead>
+        <tr>
+            <th>Metric</th>
+            <th>User</th>
+            <th>Count</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        <tr>
+            <th>Most comments</th>
+            {% if most_comments %}
+                <td>{{ most_comments.username }}</td>
+                <td>{{ most_comments.comment_count }}</td>
+            {% else %}
+                <td>No comments yet</td>
+                <td>0</td>
+            {% endif %}
+        </tr>
+    </tbody>
+
+</table>
+{% endblock %}
