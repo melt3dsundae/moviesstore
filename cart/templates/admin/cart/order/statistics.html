@@ -1,0 +1,30 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<p>
+    <a href="{% url 'admin:cart_order_changelist' %}">
+        Back to Orders
+    </a>
+</p>
+<table>
+    <thead>
+        <tr>
+            <th>Metric</th>
+            <th>User</th>
+            <th>Movies Purchased</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <th>Top buyer</th>
+            {% if top_buyer %}
+                <td>{{top_buyer.username}}</td>
+                <td>{{top_buyer.movies_purchased}}</td>
+            {% else %}
+                <td>No purchases yet</td>
+                <td>0</td>
+            {% endif %}
+        </tr>
+    </tbody>
+</table>
+
+{% endblock %}
