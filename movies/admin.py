@@ -20,11 +20,6 @@ class MovieAdmin(admin.ModelAdmin):
                 self.admin_site.admin_view(self.statistics_view),
                 name='movies_movie_statistics'
             ),
-            path(
-                'user-statistics/',
-                self.admin_site.admin_view(self.user_statistics_view),
-                name='movies_movie_user_statistics'
-            ),
         ] + super().get_urls()
     
     def statistics_view(self, request):
@@ -56,6 +51,18 @@ class MovieAdmin(admin.ModelAdmin):
             context
         )
     
+class ReviewAdmin(admin.ModelAdmin):
+    change_list_template = 'admin/movies/review/change_list.html'
+
+    def get_urls(self):
+        return [
+            path(
+                'user-statistics/',
+                self.admin_site.admin_view(self.user_statistics_view),
+                name='movies_review_user_statistics'
+            ),
+        ] + super().get_urls()
+
     def user_statistics_view(self, request):
         most_comments = (
             User.objects
@@ -67,18 +74,18 @@ class MovieAdmin(admin.ModelAdmin):
 
         context = {
             **self.admin_site.each_context(request),
-            'title': 'User Comment Statistics',
+            'title': 'Comment Statistics',
             'most_comments': most_comments
         }
 
         return TemplateResponse(
             request,
-            'admin/movies/movie/user_statistics.html',
+            'admin/movies/review/user_statistics.html',
             context
         )
 
 
 admin.site.register(Movie, MovieAdmin)
-admin.site.register(Review)
+admin.site.register(Review, ReviewAdmin)
 admin.site.register(Rating)
 admin.site.register(Report)
