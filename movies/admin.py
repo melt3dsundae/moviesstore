@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.contrib.auth.models import User
 from django.db.models import Count, Sum
 from django.template.response import TemplateResponse
 from django.urls import path
@@ -18,6 +19,11 @@ class MovieAdmin(admin.ModelAdmin):
                 'statistics/',
                 self.admin_site.admin_view(self.statistics_view),
                 name='movies_movie_statistics'
+            ),
+            path(
+                'user-statistics/',
+                self.admin_site.admin_view(self.user_statistics_view),
+                name='movies_movie_user_statistics'
             ),
         ] + super().get_urls()
     
@@ -49,12 +55,27 @@ class MovieAdmin(admin.ModelAdmin):
             'admin/movies/movie/statistics.html',
             context
         )
+    
+    def user_statistics_view(self, request):
+        most_comments = (
+            User.objects
+            .annotate(comment_count=Count('review'))
+            .filter(comment_count__gt=0)
+            .order_by('-comment_count', 'username', 'pk')
+            .first()
+        )
 
-        
+        context = {
+            **self.admin_site.each_context(request),
+            'title': 'User Comment Statistics',
+            'most_comments': most_comments
+        }
 
-
-
-
+        return TemplateResponse(
+            request,
+            'admin/movies/movie/user_statistics.html',
+            context
+        )
 
 
 admin.site.register(Movie, MovieAdmin)
