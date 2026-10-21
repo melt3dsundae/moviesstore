@@ -7,6 +7,30 @@ from .utils import calculate_cart_total
 from .models import Order, Item
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from geopy.geocoders import Nominatim
+from geopy.exc import GeocoderTimedOut, GeocoderServiceError
+
+# Initialize the geocoder with a unique user agent
+geolocator = Nominatim(user_agent="moviesstore")
+
+def geocode(city):
+    print(f"Geocoding city: {city}")
+    if not city:
+        print("No city provided")
+        return None
+    try:
+        location = geolocator.geocode(city)
+        if location:
+            address = location.raw["display_name"]
+            print(f"Address: {location.address}")
+            print(f"Coordinates: {location.latitude}, {location.longitude}")
+            return address, location.latitude, location.longitude
+        else:
+            print("Address not found")
+            return None
+    except (GeocoderTimedOut, GeocoderServiceError) as e:
+        print(f"Geocoding error: {e}")
+        return None
 
 def index(request):
     cart_total = 0
@@ -44,6 +68,9 @@ def purchase(request):
     order = Order()
     order.user = request.user
     order.total = cart_total
+    result = geocode(request.POST.get('city', '').strip())
+    if result:
+        order.region, order.region_lat, order.region_lng = result
     order.save()
     for movie in movies_in_cart:
         item = Item()
@@ -64,3 +91,18 @@ def orders(request):
     template_data['title'] = 'Orders'
     template_data['orders'] = request.user.order_set.all()
     return render(request, 'accounts/orders.html', {'template_data': template_data})
+
+@login_required
+def popularity_map(request):
+    template_data = {}
+    template_data['title'] = 'Popularity Map'
+    # get trending movies per region
+    regions = {}
+    for item in Item.objects.select_related('order', 'movie'):
+        o = item.order
+        r = regions.setdefault(o.region, {'region': o.region, 'lat': o.region_lat, 'lng': o.region_lng, 'counts': {}})
+        r['counts'][item.movie.name] = r['counts'].get(item.movie.name, 0) + item.quantity
+    for r in regions.values():
+        r['counts'] = dict(list(sorted(r['counts'].items(), key=lambda x: x[1], reverse=True))[:5])
+    template_data['regions'] = list(regions.values())
+    return render(request, 'cart/map.html', {'template_data': template_data})
