@@ -1,0 +1,15 @@
+{% extends "admin/change_list.html" %}
+
+{% block object-tools-items %}
+    <li>
+        <a href="{% url 'admin:movies_movie_statistics' %}">
+            Movie Statistics
+        </a>
+    </li>
+    <li>
+        <a href="{% url 'admin:movies_movie_user_statistics' %}">
+            User Comment Statistics
+        </a>
+    </li>
+    {{ block.super }}
+{% endblock %}
