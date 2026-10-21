@@ -9,6 +9,19 @@
         <hr />
         <p><b>Description:</b> {{ template_data.movie.description }}</p>
         <p><b>Price:</b> ${{ template_data.movie.price }}</p>
+        <p>
+          <b>Average Rating:</b>
+          {% if template_data.average_rating %}
+            {{ template_data.average_rating|floatformat:1 }} // 5.0
+            ({{ template_data.rating_count }}
+            rating{{ template_data.rating_count|pluralize }})
+          {% else %}
+            No ratings!
+          {% endif %}
+        </p>
+        {% if user.is_authenticated and template_data.user_rating %}
+        <p><b>Your Rating:</b> {{ template_data.user_rating.value }} / 5</p>
+        {% endif %}
         <p class="card-text">
           <form method="post" action="{% url 'cart.add' id=template_data.movie.id %}">
             <div class="row">
@@ -39,6 +52,9 @@
               {{ review.date }}
             </h6>
             <p class="card-text">{{ review.comment }}</p>
+            {% for rating in review.ratings.all %}
+            <p class=""card-text"><b>Rating:</b> {{ rating.value }} / 5</p>
+            {% endfor %}
             {% if user.is_authenticated and user == review.user %}
             <a class="btn btn-primary" href="{% url 'movies.edit_review' id=template_data.movie.id review_id=review.id %}">
               Edit
@@ -61,17 +77,46 @@
             <div class="col-12">
               <div class="card shadow p-3 mb-4 rounded">
                 <div class="card-body">
-                  <b class="text-start">Create a review
-                  </b><br /><br />
+                  <b class="text-start">Rate this movie or create a review!</b>
                   <form method="POST" action="{% url 'movies.create_review' id=template_data.movie.id %}">
                     {% csrf_token %}
-                    <p>
-                      <label for="comment">Comment:</label>
-                      <textarea name="comment" required class="form-control" id="comment"></textarea>
-                    </p>
+                    {% if template_data.feedback_form.non_field_errors %}
+                    <div class="alert alert-danger">
+                      {{ template_data.feedback_form.non_field_errors }}
+                    </div>
+                    {% endif %}
+                    <div class="mb-3">
+                      <fieldset class="border-0 p-0">
+                        <legend class="form_label">Rating</legend>
+                        <div class="star-rating">
+                          {% for value, label in template_data.feedback_form.rating.field.choices reversed %}
+                          {% if value %}
+                          <input
+                            id="id_rating_{{ value }}"
+                            type="radio"
+                            name="{{ template_data.feedback_form.rating.html_name }}"
+                            value="{{ value }}"
+                            aria-label="{{ label }}"
+                            {% if template_data.feedback_form.rating.value|stringformat:"s" == value|stringformat:"s" %}checked{% endif %}>
+                          <label for="id_rating_{{ value }}" title="{{ label }}">
+                            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                              <path d="M12 2.5 14.9 8.4 21.4 9.3 16.7 13.9 17.8 20.4 12 17.3 6.2 20.4 7.3 13.9 2.6 9.3 9.1 8.42"></path>
+                            </svg>
+                          </label>
+                          {% endif %}
+                          {% endfor %}
+                        </div>
+                      </fieldset>
+                      {{ template_data.feedback_form.rating.errors }}
+                    </div>
+                    <div class="mb-3">
+                      <label for="{{ template_data.feedback_form.comment.id_for_label }}" class="form-label">Review (optional) </label>
+                      {{ template_data.feedback_form.comment }}
+                      {{ template_data.feedback_form.comment.errors }}
+                    </div>
                     <div class="text-center">
                       <button type="submit" class="btn bg-dark text-white">
-                        Add Review
+                        Submit Feedback
                       </button>
                     </div>
                   </form>
@@ -80,6 +125,10 @@
             </div>
           </div>
         </div>
+        {% else %}
+        <p class="mt-4">
+          <a href="{% url 'accounts.login' %}?next={{ request.path }}">Login</a> to rate or review this movie.
+        </p>
         {% endif %}
       </div>
       <div class="col-md-6 mx-auto mb-3 text-center">

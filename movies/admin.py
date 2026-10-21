@@ -1,21 +1,16 @@
 from django.contrib import admin
-<<<<<<< Updated upstream
-=======
 from django.contrib.auth.models import User
 from django.db.models import Count, Sum
 from django.template.response import TemplateResponse
 from django.urls import path
->>>>>>> Stashed changes
 
 # Register your models here.
-from .models import Movie, Review, Report
+from .models import Movie, Rating, Review, Report
 
 class MovieAdmin(admin.ModelAdmin):
     ordering = ['name']
     search_fields = ['name']
 
-<<<<<<< Updated upstream
-=======
     change_list_template = 'admin/movies/movie/change_list.html'
 
     def get_urls(self):
@@ -83,14 +78,7 @@ class MovieAdmin(admin.ModelAdmin):
         )
 
 
-        
-
-
-
-
-
-
->>>>>>> Stashed changes
 admin.site.register(Movie, MovieAdmin)
 admin.site.register(Review)
+admin.site.register(Rating)
 admin.site.register(Report)

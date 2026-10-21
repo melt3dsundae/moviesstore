@@ -1,6 +1,28 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Movie, Review, Report
+from django.db.models import Avg, Count
+from django.db import transaction
+from .forms import FeedbackForm
+from .models import Movie, Review, Report, Rating
 from django.contrib.auth.decorators import login_required
+# https://docs.djangoproject.com/en/1.8/intro/tutorial02/
+# https://docs.djangoproject.com/en/6.1/topics/db/transactions/
+
+def _movie_detail_data(movie, user, feedback_form=None):
+    reviews = Review.objects.filter(movie=movie).select_related('user').prefetch_related('ratings')
+    ratings = Rating.objects.filter(movie=movie)
+    rating_summary = ratings.aggregate(average=Avg('value'), count=Count('id'))
+    user_rating = ratings.filter(user=user).first() if user.is_authenticated else None
+    return {
+        'title': movie.name,
+        'movie': movie,
+        'reviews': reviews,
+        'average_rating': rating_summary['average'],
+        'rating_count': rating_summary['count'],
+        'user_rating': user_rating,
+        'feedback_form': feedback_form or FeedbackForm(
+            initial={'rating': user_rating.value if user_rating else None}
+        ),
+    }
 
 # Create your views here.
 def index(request):
@@ -16,27 +38,44 @@ def index(request):
                   {'template_data': template_data})
 
 def show(request, id):
-    movie = Movie.objects.get(id=id)
-    reviews = Review.objects.filter(movie=movie)
-    template_data = {}
-    template_data['title'] = movie.name
-    template_data['movie'] = movie
-    template_data['reviews'] = reviews
+    movie = get_object_or_404(Movie, id=id)
+    template_data = _movie_detail_data(movie, request.user)
     return render(request, 'movies/show.html',
                   {'template_data': template_data})
 
 @login_required
 def create_review(request, id):
-    if request.method == 'POST' and request.POST['comment'] != '':
-        movie = Movie.objects.get(id=id)
-        review = Review()
-        review.comment = request.POST['comment']
-        review.movie = movie
-        review.user = request.user
-        review.save()
+    movie = get_object_or_404(Movie, id=id)
+    if request.method != 'POST':
         return redirect('movies.show', id=id)
-    else:
-        return redirect('movies.show', id=id)
+    form = FeedbackForm(request.POST)
+    if not form.is_valid():
+        template_data = _movie_detail_data(movie, request.user, form)
+        return render(request, 'movies/show.html', {'template_data': template_data}, status=400)
+    with transaction.atomic():
+        comment = form.cleaned_data['comment']
+        review = None
+        if comment:
+            review = Review.objects.create(
+                comment=comment,
+                movie=movie,
+                user=request.user,
+            )
+        value = form.cleaned_data['rating']
+        if value is not None:
+            rating, created = Rating.objects.get_or_create(
+                movie=movie,
+                user=request.user,
+                defaults={'value': value, 'review': review},
+            )
+            if not created:
+                rating.value = value
+                update_fields = ['value']
+                if review:
+                    rating.review = review
+                    update_fields.append('review')
+                rating.save(update_fields=update_fields)
+    return redirect('movies.show', id=id)
 
 @login_required
 def edit_review(request, id, review_id):
